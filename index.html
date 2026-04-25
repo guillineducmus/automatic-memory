@@ -69,14 +69,6 @@
         .hidden { display: none; }
         .progress-bar { width: 100%; height: 8px; background: #ecf0f1; border-radius: 4px; margin: 20px 0; overflow: hidden; }
         .progress-fill { height: 100%; background: #3498db; transition: width 0.3s ease; }
-        .error-message {
-            background: #fff3cd; color: #856404; padding: 15px;
-            border-radius: 10px; text-align: center; margin: 15px 0;
-            border: 1px solid #ffc107; display: none; font-weight: bold;
-        }
-        .debug-info {
-            font-size: 12px; color: #666; text-align: center; margin-top: 5px; word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -91,17 +83,11 @@
 
         <div id="quizContent">
             <div class="audio-player">
-                <!-- Ajout de crossorigin pour gérer les requêtes CORS -->
-                <audio id="audioPlayer" controls preload="auto" crossorigin="anonymous">
+                <audio id="audioPlayer" controls>
                     <source src="" type="audio/mpeg">
                     Votre navigateur ne supporte pas le lecteur audio.
                 </audio>
             </div>
-            <!-- Message d'erreur visible -->
-            <div class="error-message" id="audioError"></div>
-            <!-- Affichage de l'URL pour débogage -->
-            <div class="debug-info" id="debugUrl"></div>
-
             <div class="question">De quel extrait s'agit-il ?</div>
             <div class="answers" id="answersContainer"></div>
             <div class="feedback" id="feedback"></div>
@@ -117,6 +103,7 @@
     </div>
 
     <script>
+        // BASE DE DONNÉES DES 21 EXTRAITS QUIZ 4 - RECONSTRUITS SUR MODÈLE DE FALLA
         const allTracks = [
             { id: 1, composer: "Bach", work: "Suite pour violoncelle n°1 Prélude", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Bach%20-Suite%20pour%20violoncelle%20n%C2%B01%20Pr%C3%A9lude.mp3" },
             { id: 2, composer: "Beethoven", work: "Symphonie 5", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Beethoven%20-Symphonie%205.mp3" },
@@ -124,7 +111,7 @@
             { id: 4, composer: "Chopin", work: "Etude n°12 op.10 'Révolutionnaire'", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Chopin%20-Etude%20n%C2%B012%20op.10%20'R%C3%A9volutionnaire'.mp3" },
             { id: 5, composer: "Chostakovitch", work: "Jazz Suite n°2 - Valse n°2", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Chostakovitch%20-Jazz%20Suite%20n%C2%B02%20-Valse%20n%C2%B02.mp3" },
             { id: 6, composer: "Couperin", work: "Le Tic-Toc-Choc ou Les Maillotins", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Couperin%20-Le%20Tic-Toc-Choc%20ou%20Les%20Maillotins.mp3" },
-            { id: 7, composer: "De Falla", work: "Danse du feu (L'amour sorcier)", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/De%20Falla%20-Danse%20du%20feu%20(L'amour%20sorcier).mp3" },
+            { id: 7, composer: "De Falla", work: "Danse du feu (L'amour sorcier)", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/De%20Falla%20-Danse%20du%20feu%20-L'amour%20sorcier.mp3" },
             { id: 8, composer: "Elgar", work: "Marche de l'empereur Mogul (The Crown of India)", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Elgar%20-Marche%20de%20l'empereur%20Mogul%20(The%20Crown%20of%20India).mp3" },
             { id: 9, composer: "Fauré", work: "Barcarolle op26", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Faur%C3%A9%20-Barcarolle%20op26.mp3" },
             { id: 10, composer: "Florence Price", work: "Symphonie 1 (premier mouvement)", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Florence%20Price%20-Symphonie%201%20(premier%20mouvement).mp3" },
@@ -181,42 +168,8 @@
             document.getElementById('progressBar').style.width = `${((currentQuestionIndex + 1) / 20) * 100}%`;
             
             const audioPlayer = document.getElementById('audioPlayer');
-            const audioError = document.getElementById('audioError');
-            const debugUrl = document.getElementById('debugUrl');
-            
-            // IMPORTANT : On utilise l'URL telle quelle, sans encodeURI() supplémentaire
-            // car vos liens sont déjà correctement encodés (%20, %C3%A9, etc.)
-            const fileUrl = currentTrack.file;
-            
-            audioPlayer.src = fileUrl;
+            audioPlayer.src = currentTrack.file;
             audioPlayer.load();
-            
-            // Affichage de l'URL pour vérification
-            debugUrl.textContent = "URL : " + fileUrl;
-            
-            // Réinitialiser l'affichage
-            audioError.style.display = 'none';
-            audioError.textContent = '';
-            
-            // Gestionnaire d'erreur détaillé
-            audioPlayer.onerror = function(e) {
-                const errorCode = audioPlayer.error ? audioPlayer.error.code : 'Inconnu';
-                let errorMsg = "Erreur de chargement audio (Code: " + errorCode + "). ";
-                
-                if (errorCode === 1) errorMsg += "Chargement interrompu.";
-                else if (errorCode === 2) errorMsg += "Erreur réseau.";
-                else if (errorCode === 3) errorMsg += "Décodage impossible (fichier corrompu ou format non supporté).";
-                else if (errorCode === 4) errorMsg += "Fichier non trouvé ou accès refusé (CORS).";
-                else errorMsg += "Erreur inconnue.";
-
-                console.error("Erreur Audio :", errorMsg, "URL :", fileUrl);
-                
-                audioError.textContent = "⚠️ " + errorMsg + " (Vérifiez la console F12)";
-                audioError.style.display = 'block';
-                
-                // On NE passe PAS automatiquement à la suite pour permettre le diagnostic
-                // Le bouton "Suivant" reste disponible si l'utilisateur veut passer manuellement
-            };
             
             const answersContainer = document.getElementById('answersContainer');
             answersContainer.innerHTML = '';
