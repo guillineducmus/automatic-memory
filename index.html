@@ -69,6 +69,11 @@
         .hidden { display: none; }
         .progress-bar { width: 100%; height: 8px; background: #ecf0f1; border-radius: 4px; margin: 20px 0; overflow: hidden; }
         .progress-fill { height: 100%; background: #3498db; transition: width 0.3s ease; }
+        .error-message {
+            background: #fff3cd; color: #856404; padding: 15px;
+            border-radius: 10px; text-align: center; margin: 15px 0;
+            border: 1px solid #ffc107; display: none;
+        }
     </style>
 </head>
 <body>
@@ -83,11 +88,12 @@
 
         <div id="quizContent">
             <div class="audio-player">
-                <audio id="audioPlayer" controls>
+                <audio id="audioPlayer" controls preload="metadata">
                     <source src="" type="audio/mpeg">
                     Votre navigateur ne supporte pas le lecteur audio.
                 </audio>
             </div>
+            <div class="error-message" id="audioError"></div>
             <div class="question">De quel extrait s'agit-il ?</div>
             <div class="answers" id="answersContainer"></div>
             <div class="feedback" id="feedback"></div>
@@ -103,7 +109,6 @@
     </div>
 
     <script>
-        // BASE DE DONNÉES DES 21 EXTRAITS QUIZ 4 - LIENS RECONSTRUITS SUR MODÈLE
         const allTracks = [
             { id: 1, composer: "Bach", work: "Suite pour violoncelle n°1 Prélude", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Bach%20-Suite%20pour%20violoncelle%20n%C2%B01%20Pr%C3%A9lude.mp3" },
             { id: 2, composer: "Beethoven", work: "Symphonie 5", file: "https://nuage03.apps.education.fr/public.php/dav/files/fK77iBtQiTxoRRj/Beethoven%20-Symphonie%205.mp3" },
@@ -168,8 +173,26 @@
             document.getElementById('progressBar').style.width = `${((currentQuestionIndex + 1) / 20) * 100}%`;
             
             const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.src = currentTrack.file;
+            const audioError = document.getElementById('audioError');
+            
+            // Encoder l'URL pour gérer les caractères spéciaux
+            const encodedFileUrl = encodeURI(currentTrack.file);
+            audioPlayer.src = encodedFileUrl;
             audioPlayer.load();
+            
+            // Réinitialiser le message d'erreur
+            audioError.style.display = 'none';
+            audioError.textContent = '';
+            
+            // Gestionnaire d'erreur de chargement
+            audioPlayer.onerror = function() {
+                audioError.textContent = "⚠️ Impossible de charger cet extrait. Passage au suivant...";
+                audioError.style.display = 'block';
+                // Passer automatiquement à la question suivante après 2 secondes
+                setTimeout(() => {
+                    nextQuestion();
+                }, 2000);
+            };
             
             const answersContainer = document.getElementById('answersContainer');
             answersContainer.innerHTML = '';
