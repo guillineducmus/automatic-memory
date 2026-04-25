@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>entraînement big quizz 3e</title>
+    <title>Quiz Musical MCM 4 - Nextcloud</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -72,7 +72,10 @@
         .error-message {
             background: #fff3cd; color: #856404; padding: 15px;
             border-radius: 10px; text-align: center; margin: 15px 0;
-            border: 1px solid #ffc107; display: none;
+            border: 1px solid #ffc107; display: none; font-weight: bold;
+        }
+        .debug-info {
+            font-size: 12px; color: #666; text-align: center; margin-top: 5px; word-break: break-all;
         }
     </style>
 </head>
@@ -88,12 +91,17 @@
 
         <div id="quizContent">
             <div class="audio-player">
-                <audio id="audioPlayer" controls preload="metadata">
+                <!-- Ajout de crossorigin pour gérer les requêtes CORS -->
+                <audio id="audioPlayer" controls preload="auto" crossorigin="anonymous">
                     <source src="" type="audio/mpeg">
                     Votre navigateur ne supporte pas le lecteur audio.
                 </audio>
             </div>
+            <!-- Message d'erreur visible -->
             <div class="error-message" id="audioError"></div>
+            <!-- Affichage de l'URL pour débogage -->
+            <div class="debug-info" id="debugUrl"></div>
+
             <div class="question">De quel extrait s'agit-il ?</div>
             <div class="answers" id="answersContainer"></div>
             <div class="feedback" id="feedback"></div>
@@ -174,24 +182,40 @@
             
             const audioPlayer = document.getElementById('audioPlayer');
             const audioError = document.getElementById('audioError');
+            const debugUrl = document.getElementById('debugUrl');
             
-            // Encoder l'URL pour gérer les caractères spéciaux
-            const encodedFileUrl = encodeURI(currentTrack.file);
-            audioPlayer.src = encodedFileUrl;
+            // IMPORTANT : On utilise l'URL telle quelle, sans encodeURI() supplémentaire
+            // car vos liens sont déjà correctement encodés (%20, %C3%A9, etc.)
+            const fileUrl = currentTrack.file;
+            
+            audioPlayer.src = fileUrl;
             audioPlayer.load();
             
-            // Réinitialiser le message d'erreur
+            // Affichage de l'URL pour vérification
+            debugUrl.textContent = "URL : " + fileUrl;
+            
+            // Réinitialiser l'affichage
             audioError.style.display = 'none';
             audioError.textContent = '';
             
-            // Gestionnaire d'erreur de chargement
-            audioPlayer.onerror = function() {
-                audioError.textContent = "⚠️ Impossible de charger cet extrait. Passage au suivant...";
+            // Gestionnaire d'erreur détaillé
+            audioPlayer.onerror = function(e) {
+                const errorCode = audioPlayer.error ? audioPlayer.error.code : 'Inconnu';
+                let errorMsg = "Erreur de chargement audio (Code: " + errorCode + "). ";
+                
+                if (errorCode === 1) errorMsg += "Chargement interrompu.";
+                else if (errorCode === 2) errorMsg += "Erreur réseau.";
+                else if (errorCode === 3) errorMsg += "Décodage impossible (fichier corrompu ou format non supporté).";
+                else if (errorCode === 4) errorMsg += "Fichier non trouvé ou accès refusé (CORS).";
+                else errorMsg += "Erreur inconnue.";
+
+                console.error("Erreur Audio :", errorMsg, "URL :", fileUrl);
+                
+                audioError.textContent = "⚠️ " + errorMsg + " (Vérifiez la console F12)";
                 audioError.style.display = 'block';
-                // Passer automatiquement à la question suivante après 2 secondes
-                setTimeout(() => {
-                    nextQuestion();
-                }, 2000);
+                
+                // On NE passe PAS automatiquement à la suite pour permettre le diagnostic
+                // Le bouton "Suivant" reste disponible si l'utilisateur veut passer manuellement
             };
             
             const answersContainer = document.getElementById('answersContainer');
